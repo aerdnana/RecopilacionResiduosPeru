@@ -1,10 +1,11 @@
 import pandas as pd
+import numpy as np
 
-df = pd.read_csv('Dataset.csv', encoding='latin-1')
+# LIMPIEZA
 
-df = df.dropna() 
-df = df.drop_duplicates()  
+df = pd.read_csv("1. DataSet Generación Anual de residuos sólidos domiciliario_Distrital_2014_2024.csv", encoding='latin-1', sep=';')
 
+# Visualizar primeras filas
 print(df.head())
-print(df.shape)
-print(df.columns)
+print(df.info())
+print(df.isnull().sum())
