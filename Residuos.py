@@ -34,3 +34,17 @@ residuos_por_region = (
 )
 
 print(residuos_por_region)
+
+
+
+#HENRY
+# VARIABLES DERIVADAS
+
+# Ordenar por distrito y año
+df = df.sort_values(["ubigeo", "periodo"])
+
+# Porcentaje de población urbana
+df["porc_urbana"] = df["pob_urbana"] / df["pob_total"]
+
+# Porcentaje de población rural
+df["porc_rural"] = df["pob_rural"] / df["pob_total"]
