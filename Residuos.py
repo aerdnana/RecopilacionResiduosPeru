@@ -48,3 +48,25 @@ df["porc_urbana"] = df["pob_urbana"] / df["pob_total"]
 
 # Porcentaje de población rural
 df["porc_rural"] = df["pob_rural"] / df["pob_total"]
+
+
+#ANGIE
+# VARIABLES DERIVADAS - SEGUNDA PARTE
+
+# Residuos por habitante urbano al año en kg
+df["residuos_kg_hab_anual"] = (df["qresiduos_dom"] * 1000) / df["pob_urbana"]
+
+# Variación anual de generación de residuos por distrito
+df["variacion_anual_residuos"] = df.groupby("ubigeo")["qresiduos_dom"].pct_change()
+
+# Promedio histórico de generación por distrito
+df["promedio_residuos_distrito"] = df.groupby("ubigeo")["qresiduos_dom"].transform("mean")
+
+# Categoría de generación
+df["categoria_generacion"] = pd.qcut(
+    df["qresiduos_dom"],
+    q=3,
+    labels=["Baja", "Media", "Alta"]
+)
+
+print(df.head())
