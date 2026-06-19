@@ -5,13 +5,6 @@ import numpy as np
 
 df = pd.read_csv("1. DataSet Generación Anual de residuos sólidos domiciliario_Distrital_2014_2024.csv", encoding='latin-1', sep=';')
 
-# Convertir columnas numéricas
-df["POB_TOTAL"] = pd.to_numeric(df["POB_TOTAL"], errors='coerce')
-df["POB_URBANA"] = pd.to_numeric(df["POB_URBANA"], errors='coerce')
-df["POB_RURAL"] = pd.to_numeric(df["POB_RURAL"], errors='coerce')
-df["GPC_DOM"] = pd.to_numeric(df["GPC_DOM"], errors='coerce')
-df["QRESIDUOS_DOM"] = pd.to_numeric(df["QRESIDUOS_DOM"], errors='coerce')
-df["PERIODO"] = pd.to_numeric(df["PERIODO"], errors='coerce')
 
 print(df.head())
 print(df.info())
@@ -23,19 +16,19 @@ print(df.isnull().sum())
 print(df.describe())
 
 # Revisar años disponibles
-print(df["PERIODO"].unique())
+print(df["periodo"].unique())
 
 # Generación total por año
-generacion_anual = df.groupby("PERIODO")["QRESIDUOS_DOM"].sum()
+generacion_anual = df.groupby("periodo")["qresiduos_dom"].sum()
 print(generacion_anual)
 
 # Generación total por departamento
-generacion_departamento = df.groupby("DEPARTAMENTO")["QRESIDUOS_DOM"].sum().sort_values(ascending=False)
+generacion_departamento = df.groupby("departamento")["qresiduos_dom"].sum().sort_values(ascending=False)
 print(generacion_departamento)
 
 # Generación promedio por región natural
 residuos_por_region = (
-    df.groupby("REG_NAT")["QRESIDUOS_DOM"]
+    df.groupby("reg_nat")["qresiduos_dom"]
     .mean()
     .sort_values(ascending=False)
 )
@@ -48,30 +41,30 @@ print(residuos_por_region)
 # VARIABLES DERIVADAS
 
 # Ordenar por distrito y año
-df = df.sort_values(["UBIGEO", "PERIODO"])
+df = df.sort_values(["ubigeo", "periodo"])
 
 # Porcentaje de población urbana
-df["porc_urbana"] = df["POB_URBANA"] / df["POB_TOTAL"]
+df["porc_urbana"] = df["pob_urbana"] / df["pob_total"]
 
 # Porcentaje de población rural
-df["porc_rural"] = df["POB_RURAL"] / df["POB_TOTAL"]
+df["porc_rural"] = df["pob_rural"] / df["pob_total"]
 
 
 #ANGIE
 # VARIABLES DERIVADAS - SEGUNDA PARTE
 
 # Residuos por habitante urbano al año en kg
-df["residuos_kg_hab_anual"] = (df["QRESIDUOS_DOM"] * 1000) / df["POB_URBANA"]
+df["residuos_kg_hab_anual"] = (df["qresiduos_dom"] * 1000) / df["pob_urbana"]
 
 # Variación anual de generación de residuos por distrito
-df["variacion_anual_residuos"] = df.groupby("UBIGEO")["QRESIDUOS_DOM"].pct_change()
+df["variacion_anual_residuos"] = df.groupby("ubigeo")["qresiduos_dom"].pct_change()
 
 # Promedio histórico de generación por distrito
-df["promedio_residuos_distrito"] = df.groupby("UBIGEO")["QRESIDUOS_DOM"].transform("mean")
+df["promedio_residuos_distrito"] = df.groupby("ubigeo")["qresiduos_dom"].transform("mean")
 
 # Categoría de generación
 df["categoria_generacion"] = pd.qcut(
-    df["QRESIDUOS_DOM"],
+    df["qresiduos_dom"],
     q=3,
     labels=["Baja", "Media", "Alta"]
 )
