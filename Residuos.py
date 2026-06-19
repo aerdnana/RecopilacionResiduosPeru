@@ -9,6 +9,18 @@ df = pd.read_csv("1. DataSet Generación Anual de residuos sólidos domiciliario
 print(df.head())
 print(df.info())
 print(df.isnull().sum())
+
+# Estandarizar nombres de columnas
+df.columns = (
+    df.columns
+    .str.strip() #borra espacios al inicio y al final
+    .str.lower() #convierte a minuscula
+    .str.replace(" ", "_") #reemplaza espacios por guiones bajos
+    .str.replace(".", "", regex=False) #borra puntos
+)
+
+print(df.columns)
+
 # ANALISIS EXPLORATORIO
 
 
