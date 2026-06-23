@@ -655,3 +655,90 @@ mejor_prediccion = predicciones_guardadas[mejor_modelo_nombre]
 
 print("\nMejor modelo seleccionado:", mejor_modelo_nombre)
 
+
+# Guardar modelo entrenado
+joblib.dump(
+    mejor_modelo,
+    "resultados_regresion/mejor_modelo_regresion.pkl"
+)
+
+
+# GUARDAR PREDICCIONES ------------------------------------------------------------------------------------
+
+df_predicciones = test_df[columnas_id + [objetivo]].copy()
+
+df_predicciones["prediccion_qresiduos_dom"] = mejor_prediccion
+
+df_predicciones["error_absoluto"] = np.abs(
+    df_predicciones[objetivo] - df_predicciones["prediccion_qresiduos_dom"]
+)
+
+df_predicciones["error_porcentual"] = np.where(
+    df_predicciones[objetivo] > 0,
+    df_predicciones["error_absoluto"] / df_predicciones[objetivo] * 100,
+    np.nan
+)
+
+df_predicciones.to_excel(
+    "resultados_regresion/predicciones_mejor_modelo.xlsx",
+    index=False
+)
+
+print("\nPrimeras predicciones:")
+print(df_predicciones.head())
+
+
+# GRÁFICO: VALORES REALES VS PREDICHOS --------------------------------------------------------------------
+
+plt.figure(figsize=(8, 5))
+plt.scatter(y_test, mejor_prediccion, alpha=0.5)
+
+limite_min = min(y_test.min(), mejor_prediccion.min())
+limite_max = max(y_test.max(), mejor_prediccion.max())
+
+plt.plot([limite_min, limite_max], [limite_min, limite_max])
+
+plt.title(f"Valores reales vs predichos - {mejor_modelo_nombre}")
+plt.xlabel("Valores reales de residuos")
+plt.ylabel("Valores predichos de residuos")
+plt.tight_layout()
+plt.savefig("resultados_regresion/reales_vs_predichos.png")
+plt.close()
+
+
+# GRÁFICO EN ESCALA LOGARÍTMICA ---------------------------------------------------------------------------
+
+df_grafico = df_predicciones[
+    (df_predicciones[objetivo] > 0) &
+    (df_predicciones["prediccion_qresiduos_dom"] > 0)
+]
+
+plt.figure(figsize=(8, 5))
+plt.scatter(
+    df_grafico[objetivo],
+    df_grafico["prediccion_qresiduos_dom"],
+    alpha=0.5
+)
+
+limite_min = min(
+    df_grafico[objetivo].min(),
+    df_grafico["prediccion_qresiduos_dom"].min()
+)
+
+limite_max = max(
+    df_grafico[objetivo].max(),
+    df_grafico["prediccion_qresiduos_dom"].max()
+)
+
+plt.plot([limite_min, limite_max], [limite_min, limite_max])
+
+plt.xscale("log")
+plt.yscale("log")
+
+plt.title(f"Valores reales vs predichos en escala log - {mejor_modelo_nombre}")
+plt.xlabel("Valores reales de residuos")
+plt.ylabel("Valores predichos de residuos")
+plt.tight_layout()
+plt.savefig("resultados_regresion/reales_vs_predichos_log.png")
+plt.close()
+
