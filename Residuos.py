@@ -535,3 +535,123 @@ print("Año usado para prueba:", anio_test)
 print("Registros de entrenamiento:", X_train.shape[0])
 print("Registros de prueba:", X_test.shape[0])
 
+# PREPROCESAMIENTO ----------------------------------------------------------------------------------------
+
+try:
+    onehot = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+except TypeError:
+    onehot = OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+preprocesador = ColumnTransformer(
+    transformers=[
+        (
+            "num",
+            Pipeline(
+                steps=[
+                    ("imputador", SimpleImputer(strategy="median")),
+                    ("escalador", StandardScaler())
+                ]
+            ),
+            variables_numericas
+        ),
+        (
+            "cat",
+            Pipeline(
+                steps=[
+                    ("imputador", SimpleImputer(strategy="most_frequent")),
+                    ("onehot", onehot)
+                ]
+            ),
+            variables_categoricas
+        )
+    ]
+)
+
+
+# MODELOS A COMPARAR --------------------------------------------------------------------------------------
+
+modelos = {
+    "Ridge Regression": Ridge(alpha=1.0),
+
+    "Árbol de Decisión": DecisionTreeRegressor(
+        max_depth=12,
+        random_state=42
+    ),
+
+    "Random Forest": RandomForestRegressor(
+        n_estimators=150,
+        max_depth=18,
+        random_state=42,
+        n_jobs=-1
+    ),
+
+    "Gradient Boosting": GradientBoostingRegressor(
+        n_estimators=150,
+        learning_rate=0.05,
+        max_depth=3,
+        random_state=42
+    )
+}
+
+
+# ENTRENAMIENTO Y EVALUACIÓN ------------------------------------------------------------------------------
+
+resultados = []
+modelos_entrenados = {}
+predicciones_guardadas = {}
+
+for nombre, algoritmo in modelos.items():
+
+    modelo = Pipeline(
+        steps=[
+            ("preprocesador", preprocesador),
+            ("modelo", algoritmo)
+        ]
+    )
+
+    modelo.fit(X_train, y_train)
+
+    y_pred = modelo.predict(X_test)
+
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+
+    y_test_np = y_test.to_numpy()
+    mascara = y_test_np != 0
+
+    mape = np.mean(
+        np.abs((y_test_np[mascara] - y_pred[mascara]) / y_test_np[mascara])
+    ) * 100
+
+    resultados.append({
+        "modelo": nombre,
+        "MAE": mae,
+        "RMSE": rmse,
+        "R2": r2,
+        "MAPE (%)": mape
+    })
+
+    modelos_entrenados[nombre] = modelo
+    predicciones_guardadas[nombre] = y_pred
+
+
+df_resultados = pd.DataFrame(resultados).sort_values("RMSE")
+
+print("\nComparación de modelos de regresión:")
+print(df_resultados)
+
+df_resultados.to_excel(
+    "resultados_regresion/comparacion_modelos_regresion.xlsx",
+    index=False
+)
+
+
+# SELECCIÓN DEL MEJOR MODELO ------------------------------------------------------------------------------
+
+mejor_modelo_nombre = df_resultados.iloc[0]["modelo"]
+mejor_modelo = modelos_entrenados[mejor_modelo_nombre]
+mejor_prediccion = predicciones_guardadas[mejor_modelo_nombre]
+
+print("\nMejor modelo seleccionado:", mejor_modelo_nombre)
+
