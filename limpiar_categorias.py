@@ -162,6 +162,7 @@ def limpiar_columna(df, columna):
 
     # Normalizar todos los valores
     df[columna] = df[columna].apply(normalizar_texto)
+    df = df[~df[columna].str.upper().isin(['PROVINCIA', 'COLUMNA', '', 'NAN'])]
 
     # Mapeo de correcciones de acentos específicas por columna
     correcciones_por_columna = {
@@ -358,24 +359,6 @@ print("\nRESUMEN DE CAMBIOS:")
 print("  Total de cambios realizados: {}".format(total_cambios))
 print("  Total de registros afectados: {}".format(total_registros_afectados))
 
-# Guardar listado auditado de distritos por ubigeo
-distritos_reporte = (
-    df[['_ubigeo_distrito', 'departamento', 'provincia', 'distrito']]
-    .drop_duplicates(subset=['_ubigeo_distrito'])
-    .sort_values('_ubigeo_distrito')
-)
-
-with open("distritos_unicos.txt", "w", encoding="utf-8") as f:
-    print("LISTA DE DISTRITOS OFICIALES POR UBIGEO", file=f)
-    print("Total: {}".format(len(distritos_reporte)), file=f)
-    print("", file=f)
-    for _, fila in distritos_reporte.iterrows():
-        print("{};{};{};{}".format(
-            fila['_ubigeo_distrito'],
-            fila['departamento'],
-            fila['provincia'],
-            fila['distrito']
-        ), file=f)
 
 # Guardar dataset
 print("\n" + "-" * 100)
@@ -393,8 +376,7 @@ except PermissionError:
     print("Se guardo una copia actualizada en: {}".format(archivo_salida))
 
 print("\nArchivo guardado: {}".format(archivo_salida))
-print("Listado guardado: distritos_unicos.txt")
-
 print("\n" + "=" * 100)
 print("PROCESO COMPLETADO EXITOSAMENTE")
 print("=" * 100 + "\n")
+
