@@ -4,8 +4,17 @@ import numpy as np
 # lib para visualización-----------------------------------------------------------------------
 import matplotlib.pyplot as plt
 import os
-
-
+# libreiajs -------------------------------------------------------------------------------
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Ridge
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import joblib
 # LIMPIEZA
 
 # Cargar dataset limpio 
@@ -379,3 +388,150 @@ plt.xticks(rotation=0)
 plt.tight_layout()
 plt.savefig("graficos/tendencia_crecimiento_distritos.png")
 plt.close()
+
+
+# MODELO DE REGRESIÓN --------------------------------------------------------------------------------------
+
+os.makedirs("resultados_regresion", exist_ok=True)
+
+# Copia del dataset
+df_ml = df.copy()
+
+# Asegurar orden temporal
+df_ml = df_ml.sort_values(["ubigeo", "periodo"])
+
+# Asegurar que las variables numéricas estén en formato numérico
+columnas_numericas_base = [
+    "periodo",
+    "pob_total",
+    "pob_urbana",
+    "pob_rural",
+    "gpc_dom",
+    "qresiduos_dom",
+    "porc_urbana",
+    "porc_rural",
+    "generacion_acumulada_previa"
+]
+
+for col in columnas_numericas_base:
+    if col in df_ml.columns:
+        df_ml[col] = pd.to_numeric(df_ml[col], errors="coerce")
+
+
+# VARIABLES HISTÓRICAS SEGURAS ---------------------------------------------------------------------------
+
+# Residuos generados por el distrito en el año anterior
+df_ml["residuos_anio_anterior"] = (
+    df_ml.groupby("ubigeo")["qresiduos_dom"]
+    .shift(1)
+)
+
+# GPC del año anterior
+df_ml["gpc_anio_anterior"] = (
+    df_ml.groupby("ubigeo")["gpc_dom"]
+    .shift(1)
+)
+
+# Población urbana del año anterior
+df_ml["pob_urbana_anio_anterior"] = (
+    df_ml.groupby("ubigeo")["pob_urbana"]
+    .shift(1)
+)
+
+# Variación previa de residuos
+df_ml["variacion_residuos_previa"] = (
+    df_ml.groupby("ubigeo")["qresiduos_dom"]
+    .pct_change()
+)
+
+df_ml["variacion_residuos_previa"] = (
+    df_ml.groupby("ubigeo")["variacion_residuos_previa"]
+    .shift(1)
+)
+
+df_ml["variacion_residuos_previa"] = df_ml["variacion_residuos_previa"].replace(
+    [np.inf, -np.inf],
+    np.nan
+)
+
+# Promedio histórico previo
+df_ml["conteo_previo"] = df_ml.groupby("ubigeo").cumcount()
+
+df_ml["promedio_residuos_previo"] = np.where(
+    df_ml["conteo_previo"] > 0,
+    df_ml["generacion_acumulada_previa"] / df_ml["conteo_previo"],
+    np.nan
+)
+
+
+# DEFINICIÓN DEL MODELO -----------------------------------------------------------------------------------
+
+objetivo = "qresiduos_dom"
+
+variables_numericas = [
+    "periodo",
+    "pob_total",
+    "pob_urbana",
+    "pob_rural",
+    "gpc_dom",
+    "porc_urbana",
+    "porc_rural",
+    "residuos_anio_anterior",
+    "gpc_anio_anterior",
+    "pob_urbana_anio_anterior",
+    "variacion_residuos_previa",
+    "generacion_acumulada_previa",
+    "promedio_residuos_previo"
+]
+
+variables_categoricas = [
+    "reg_nat",
+    "departamento",
+    "provincia"
+]
+
+columnas_id = [
+    "ubigeo",
+    "departamento",
+    "provincia",
+    "distrito",
+    "periodo"
+]
+
+# Crear lista de columnas sin duplicados
+columnas_modelo = columnas_id + variables_numericas + variables_categoricas + [objetivo]
+columnas_modelo = list(dict.fromkeys(columnas_modelo))
+
+# Crear dataset del modelo sin columnas duplicadas
+df_modelo = df_ml[columnas_modelo].copy()
+
+# Seguridad extra: eliminar columnas duplicadas si existieran
+df_modelo = df_modelo.loc[:, ~df_modelo.columns.duplicated()]
+
+# Eliminar filas sin variable objetivo
+df_modelo = df_modelo.dropna(subset=[objetivo])
+
+
+
+# Eliminar filas sin variable objetivo
+df_modelo = df_modelo.dropna(subset=[objetivo])
+
+
+# DIVISIÓN TEMPORAL ---------------------------------------------------------------------------------------
+
+# Para el trabajo final es mejor probar con el último año disponible
+anio_test = df_modelo["periodo"].max()
+
+train_df = df_modelo[df_modelo["periodo"] < anio_test]
+test_df = df_modelo[df_modelo["periodo"] == anio_test]
+
+X_train = train_df[variables_numericas + variables_categoricas]
+y_train = train_df[objetivo]
+
+X_test = test_df[variables_numericas + variables_categoricas]
+y_test = test_df[objetivo]
+
+print("Año usado para prueba:", anio_test)
+print("Registros de entrenamiento:", X_train.shape[0])
+print("Registros de prueba:", X_test.shape[0])
+
