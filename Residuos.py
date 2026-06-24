@@ -15,6 +15,9 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.decomposition import PCA
 # LIMPIEZA
 
 # Cargar dataset limpio 
@@ -792,3 +795,49 @@ except Exception as e:
 
 
 print("\nModelo final de regresión ejecutado correctamente.")
+
+# CLUSTERING POR DISTRITOS ---------------------------------------------------------------------------------
+
+os.makedirs("resultados_clustering", exist_ok=True)
+
+# 1:
+# Se ordena por ubigeo y periodo para quedarnos con el nombre más reciente del distrito
+df_clust_base = df.sort_values(["ubigeo", "periodo"]).copy()
+
+# 2:
+# Se agrupa SOLO por ubigeo para asegurar una sola fila por distrito.
+# Antes se agrupaba por ubigeo + departamento + provincia + distrito,
+# lo cual podía duplicar distritos si el nombre cambió en algún año.
+df_cluster = (
+    df_clust_base.groupby("ubigeo")
+    .agg(
+        departamento=("departamento", "last"),
+        provincia=("provincia", "last"),
+        distrito=("distrito", "last"),
+
+        pob_total_prom=("pob_total", "mean"),
+        porc_urbana_prom=("porc_urbana", "mean"),
+        gpc_dom_prom=("gpc_dom", "mean"),
+        qresiduos_dom_prom=("qresiduos_dom", "mean"),
+        residuos_kg_hab_anual_prom=("residuos_kg_hab_anual", "mean"),
+
+        # 3:
+        # Se usa cambio_total_residuos en vez de variacion_anual_prom,
+        # porque representa mejor el cambio histórico total del distrito.
+        cambio_total_residuos=("cambio_total_residuos", "first")
+    )
+    .reset_index()
+)
+
+variables_cluster = [
+    "pob_total_prom",
+    "porc_urbana_prom",
+    "gpc_dom_prom",
+    "qresiduos_dom_prom",
+    "residuos_kg_hab_anual_prom",
+    "cambio_total_residuos"
+]
+
+# Quitar infinitos y distritos sin datos suficientes
+df_cluster = df_cluster.replace([np.inf, -np.inf], np.nan)
+df_cluster = df_cluster.dropna(subset=variables_cluster)
