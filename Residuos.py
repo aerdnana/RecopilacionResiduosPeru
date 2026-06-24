@@ -742,3 +742,53 @@ plt.tight_layout()
 plt.savefig("resultados_regresion/reales_vs_predichos_log.png")
 plt.close()
 
+
+# IMPORTANCIA DE VARIABLES --------------------------------------------------------------------------------
+
+try:
+    nombres_variables = mejor_modelo.named_steps["preprocesador"].get_feature_names_out()
+    modelo_interno = mejor_modelo.named_steps["modelo"]
+
+    if hasattr(modelo_interno, "feature_importances_"):
+        importancias = modelo_interno.feature_importances_
+
+    elif hasattr(modelo_interno, "coef_"):
+        importancias = np.abs(modelo_interno.coef_)
+
+    else:
+        importancias = None
+
+    if importancias is not None:
+
+        df_importancias = pd.DataFrame({
+            "variable": nombres_variables,
+            "importancia": importancias
+        }).sort_values("importancia", ascending=False)
+
+        print("\nTop 15 variables más importantes:")
+        print(df_importancias.head(15))
+
+        df_importancias.to_excel(
+            "resultados_regresion/importancia_variables.xlsx",
+            index=False
+        )
+
+        top_importancias = df_importancias.head(15).sort_values("importancia")
+
+        plt.figure(figsize=(9, 6))
+        plt.barh(
+            top_importancias["variable"],
+            top_importancias["importancia"]
+        )
+        plt.title("Top 15 variables más importantes del modelo")
+        plt.xlabel("Importancia")
+        plt.ylabel("Variable")
+        plt.tight_layout()
+        plt.savefig("resultados_regresion/importancia_variables.png")
+        plt.close()
+
+except Exception as e:
+    print("No se pudo generar la importancia de variables:", e)
+
+
+print("\nModelo final de regresión ejecutado correctamente.")
