@@ -841,3 +841,59 @@ variables_cluster = [
 # Quitar infinitos y distritos sin datos suficientes
 df_cluster = df_cluster.replace([np.inf, -np.inf], np.nan)
 df_cluster = df_cluster.dropna(subset=variables_cluster)
+
+limite_inf = df_cluster["cambio_total_residuos"].quantile(0.01)
+limite_sup = df_cluster["cambio_total_residuos"].quantile(0.99)
+
+df_cluster = df_cluster[
+    (df_cluster["cambio_total_residuos"] >= limite_inf) &
+    (df_cluster["cambio_total_residuos"] <= limite_sup)
+]
+
+print("\nDistritos disponibles para clustering:", df_cluster.shape[0])
+
+df_cluster["log_pob_total"] = np.log1p(df_cluster["pob_total_prom"])
+df_cluster["log_qresiduos_dom"] = np.log1p(df_cluster["qresiduos_dom_prom"])
+df_cluster["log_residuos_kg_hab"] = np.log1p(df_cluster["residuos_kg_hab_anual_prom"])
+
+variables_modelo_cluster = [
+    "log_pob_total",
+    "porc_urbana_prom",
+    "gpc_dom_prom",
+    "log_qresiduos_dom",
+    "log_residuos_kg_hab",
+    "cambio_total_residuos"
+]
+
+scaler = StandardScaler()
+X_cluster = scaler.fit_transform(df_cluster[variables_modelo_cluster])
+
+inercias = []
+siluetas = []
+rango_k = range(2, 8)
+
+for k in rango_k:
+    km_prueba = KMeans(
+        n_clusters=k,
+        random_state=42,
+        n_init=10
+    )
+
+    etiquetas_prueba = km_prueba.fit_predict(X_cluster)
+
+    inercias.append(km_prueba.inertia_)
+    siluetas.append(silhouette_score(X_cluster, etiquetas_prueba))
+
+df_eval_k = pd.DataFrame({
+    "k": list(rango_k),
+    "inercia": inercias,
+    "silueta": siluetas
+})
+
+print("\nEvaluación de K:")
+print(df_eval_k)
+
+df_eval_k.to_excel(
+    "resultados_clustering/evaluacion_k_clustering.xlsx",
+    index=False
+)
