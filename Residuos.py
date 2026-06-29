@@ -951,9 +951,9 @@ resumen_clusters["cantidad_distritos"] = df_cluster.groupby("cluster")["ubigeo"]
 print("\nResumen de cada cluster:")
 print(resumen_clusters)
 
-resumen_clusters.to_excel(
-    "resultados_clustering/resumen_clusters.xlsx"
-)
+#resumen_clusters.to_excel(
+#    "resultados_clustering/resumen_clusters.xlsx"
+#)
 
 # CAMBIO 7:
 # Nombres de clusters mejorados según población y cambio histórico
@@ -978,6 +978,29 @@ for c in resumen_clusters.index:
         nombres_cluster[c] = "Distritos típicos"
 
 df_cluster["nombre_cluster"] = df_cluster["cluster"].map(nombres_cluster)
+
+# Resumen interpretado de clusters con nombre del grupo
+resumen_clusters = (
+    df_cluster
+    .groupby(["cluster", "nombre_cluster"])[variables_cluster]
+    .mean()
+    .round(2)
+)
+
+resumen_clusters["cantidad_distritos"] = (
+    df_cluster
+    .groupby(["cluster", "nombre_cluster"])["ubigeo"]
+    .count()
+)
+
+print("\nResumen interpretado de clusters:")
+print(resumen_clusters)
+
+# Exportar resumen final con nombres de clusters
+resumen_clusters.to_excel(
+    "resultados_clustering/resumen_clusters.xlsx"
+)
+
 
 print("\nNombres asignados a cada cluster:")
 print(nombres_cluster)
@@ -1071,15 +1094,21 @@ df_cluster["pca_1"] = X_pca[:, 0]
 df_cluster["pca_2"] = X_pca[:, 1]
 
 plt.figure(figsize=(8, 5))
-plt.scatter(
-    df_cluster["pca_1"],
-    df_cluster["pca_2"],
-    c=df_cluster["cluster"],
-    alpha=0.6
-)
+
+for c in sorted(df_cluster["cluster"].unique()):
+    subset = df_cluster[df_cluster["cluster"] == c]
+
+    plt.scatter(
+        subset["pca_1"],
+        subset["pca_2"],
+        label=f"Cluster {c} - {nombres_cluster[c]}",
+        alpha=0.6
+    )
+
 plt.title("Visualización de clusters mediante PCA")
 plt.xlabel("Componente principal 1")
 plt.ylabel("Componente principal 2")
+plt.legend()
 plt.tight_layout()
 plt.savefig("resultados_clustering/clusters_pca.png")
 plt.close()
